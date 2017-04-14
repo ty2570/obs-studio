@@ -849,6 +849,7 @@
     <addaction name="separator"/>
     <addaction name="menuLogFiles"/>
     <addaction name="actionCheckForUpdates"/>
+    <addaction name="actionTest123"/>
    </widget>
    <widget class="QMenu" name="menuBasic_MainMenu_Edit">
     <property name="title">
@@ -1457,6 +1458,11 @@
   <action name="actionPasteDup">
    <property name="text">
     <string>PasteDuplicate</string>
+   </property>
+  </action>
+  <action name="actionTest123">
+   <property name="text">
+    <string>Test123</string>
    </property>
   </action>
  </widget>

@@ -604,6 +604,8 @@ private slots:
 
 	void on_modeSwitch_clicked();
 
+	void on_actionTest123_triggered();
+
 	void logUploadFinished(const QString &text, const QString &error);
 
 	void updateCheckFinished();

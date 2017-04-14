@@ -40,6 +40,7 @@
 #include "item-widget-helpers.hpp"
 #include "window-basic-settings.hpp"
 #include "window-namedialog.hpp"
+#include "window-basic-auto-config.hpp"
 #include "window-basic-source-select.hpp"
 #include "window-basic-main.hpp"
 #include "window-basic-main-outputs.hpp"
@@ -5344,4 +5345,12 @@ void OBSBasic::on_actionPasteFilters_triggered()
 		return;
 
 	obs_source_copy_filters(dstSource, source);
+}
+
+void OBSBasic::on_actionTest123_triggered()
+{
+	AutoConfig test(this);
+	test.setModal(true);
+	test.show();
+	test.exec();
 }
