@@ -1,44 +1,101 @@
 #pragma once
 
 #include <QWizard>
+#include <QPointer>
+#include <QFormLayout>
 #include <QWizardPage>
-#include <util/threading.h>
+
+#include <condition_variable>
+#include <utility>
 #include <thread>
+#include <vector>
+#include <string>
+#include <mutex>
 
 class Ui_AutoConfigStartPage;
+class Ui_AutoConfigVideoPage;
 class Ui_AutoConfigStreamPage;
 class Ui_AutoConfigTestPage;
-class Ui_AutoConfigFinishPage;
 
 class AutoConfig : public QWizard {
 	Q_OBJECT
 
 	friend class AutoConfigStartPage;
+	friend class AutoConfigVideoPage;
 	friend class AutoConfigStreamPage;
 	friend class AutoConfigTestPage;
-	friend class AutoConfigFinishPage;
 
 	enum class Type {
 		Invalid,
 		Streaming,
-		Recording,
-		Both
+		Recording
 	};
 
+	enum class Service {
+		Twitch,
+		Hitbox,
+		Beam,
+		Other
+	};
+
+	enum class Encoder {
+		x264,
+		NVENC,
+		QSV,
+		AMD,
+		Stream
+	};
+
+	enum class Quality {
+		Stream,
+		High
+	};
+
+	Service serviceType = Service::Other;
+	Quality recordingQuality = Quality::Stream;
+	Encoder recordingEncoder = Encoder::Stream;
+	Encoder streamingEncoder = Encoder::x264;
 	Type type = Type::Invalid;
 	int idealBitrate = 2500;
+	int baseResolutionCX = 1920;
+	int baseResolutionCY = 1080;
 	int idealResolutionCX = 1280;
 	int idealResolutionCY = 720;
-	int idealFPS = 60;
+	int idealFPSNum = 60;
+	int idealFPSDen = 1;
+	std::string service;
+	std::string serverName;
+	std::string server;
+	std::string key;
+
+	bool hardwareEncodingAvailable = false;
+	bool nvencAvailable = false;
+	bool qsvAvailable = false;
+	bool vceAvailable = false;
+
+	int startingBitrate = 2500;
+	bool bandwidthTest = false;
+	bool testRegions = true;
+	bool regionUS = true;
+	bool regionEU = true;
+	bool regionAsia = true;
+	bool regionOther = true;
+	bool preferHighFPS = false;
+	bool preferHardware = false;
+	int specificFPSNum = 0;
+	int specificFPSDen = 0;
+
+	void TestHardwareEncoding();
+	bool CanTestServer(const char *server);
 
 public:
 	AutoConfig(QWidget *parent);
 
 	enum Page {
 		StartPage,
+		VideoPage,
 		StreamPage,
-		TestPage,
-		FinishPage
+		TestPage
 	};
 };
 
@@ -60,7 +117,29 @@ public:
 public slots:
 	void on_prioritizeStreaming_clicked();
 	void on_prioritizeRecording_clicked();
-	void on_prioritizeBoth_clicked();
+};
+
+class AutoConfigVideoPage : public QWizardPage {
+	Q_OBJECT
+
+	friend class AutoConfig;
+
+	Ui_AutoConfigVideoPage *ui;
+
+	enum class FPSType : int {
+		PreferHighFPS,
+		PreferHighRes,
+		UseCurrent,
+		fps30,
+		fps60
+	};
+
+public:
+	AutoConfigVideoPage(QWidget *parent = nullptr);
+	~AutoConfigVideoPage();
+
+	virtual int nextId() const override;
+	virtual bool validatePage() override;
 };
 
 class AutoConfigStreamPage : public QWizardPage {
@@ -69,12 +148,20 @@ class AutoConfigStreamPage : public QWizardPage {
 	friend class AutoConfig;
 
 	Ui_AutoConfigStreamPage *ui;
+	bool ready = false;
 
 public:
 	AutoConfigStreamPage(QWidget *parent = nullptr);
 	~AutoConfigStreamPage();
 
+	virtual bool isComplete() const override;
 	virtual int nextId() const override;
+	virtual bool validatePage() override;
+
+public slots:
+	void on_show_clicked();
+	void ServiceChanged();
+	void UpdateCompleted();
 };
 
 class AutoConfigTestPage : public QWizardPage {
@@ -82,9 +169,13 @@ class AutoConfigTestPage : public QWizardPage {
 
 	friend class AutoConfig;
 
+	QPointer<QFormLayout> results;
+
 	Ui_AutoConfigTestPage *ui;
 	std::thread testThread;
-	os_event_t *stop = nullptr;
+	std::condition_variable cv;
+	std::mutex m;
+	bool cancel = false;
 
 	enum class Stage {
 		Starting,
@@ -95,41 +186,46 @@ class AutoConfigTestPage : public QWizardPage {
 	};
 
 	Stage stage = Stage::Starting;
-	bool resolutionTested = false;
+	bool softwareTested = false;
 
 	void StartBandwidthStage();
 	void StartStreamEncoderStage();
 	void StartRecordingEncoderStage();
 
-	void TestResolution();
+	void FindIdealHardwareStreamResolution();
+	bool TestSoftwareEncoding();
 
 	void TestBandwidthThread();
 	void TestStreamEncoderThread();
 	void TestRecordingEncoderThread();
+
+	void FinalizeResults();
+
+	struct ServerInfo {
+		std::string name;
+		std::string address;
+		int bitrate = 0;
+		int ms = -1;
+
+		inline ServerInfo(const char *name_, const char *address_)
+			: name(name_), address(address_)
+		{
+		}
+	};
+
+	void GetServers(std::vector<ServerInfo> &servers);
 
 public:
 	AutoConfigTestPage(QWidget *parent = nullptr);
 	~AutoConfigTestPage();
 
 	virtual void initializePage() override;
+	virtual void cleanupPage() override;
 	virtual bool isComplete() const override;
 	virtual int nextId() const override;
 
 public slots:
 	void NextStage();
 	void UpdateMessage(QString message);
-};
-
-class AutoConfigFinishPage : public QWizardPage {
-	Q_OBJECT
-
-	friend class AutoConfig;
-
-	Ui_AutoConfigFinishPage *ui;
-
-public:
-	AutoConfigFinishPage(QWidget *parent = nullptr);
-	~AutoConfigFinishPage();
-
-	virtual int nextId() const override;
+	void Failure(QString message);
 };

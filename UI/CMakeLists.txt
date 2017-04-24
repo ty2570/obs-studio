@@ -221,9 +221,9 @@ set(obs_HEADERS
 set(obs_UI
 	forms/NameDialog.ui
 	forms/AutoConfigStartPage.ui
+	forms/AutoConfigVideoPage.ui
 	forms/AutoConfigStreamPage.ui
 	forms/AutoConfigTestPage.ui
-	forms/AutoConfigFinishPage.ui
 	forms/OBSLicenseAgreement.ui
 	forms/OBSLogReply.ui
 	forms/OBSBasic.ui

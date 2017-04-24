@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
+    <width>515</width>
     <height>300</height>
    </rect>
   </property>
@@ -14,6 +14,9 @@
    <string notr="true"/>
   </property>
   <layout class="QFormLayout" name="formLayout">
+   <property name="fieldGrowthPolicy">
+    <enum>QFormLayout::ExpandingFieldsGrow</enum>
+   </property>
    <property name="labelAlignment">
     <set>Qt::AlignRight|Qt::AlignTop|Qt::AlignTrailing</set>
    </property>
@@ -22,21 +25,90 @@
      <property name="text">
       <string>Basic.AutoConfig.StreamPage.Service</string>
      </property>
+     <property name="buddy">
+      <cstring>service</cstring>
+     </property>
     </widget>
    </item>
    <item row="0" column="1">
     <widget class="QComboBox" name="service"/>
    </item>
-   <item row="2" column="0">
-    <widget class="QLabel" name="regionLabel">
+   <item row="1" column="0">
+    <widget class="QLabel" name="label_2">
      <property name="text">
-      <string>BandwidthTest.Region</string>
+      <string>Basic.AutoConfig.StreamPage.StreamKey</string>
+     </property>
+     <property name="buddy">
+      <cstring>key</cstring>
      </property>
     </widget>
    </item>
-   <item row="2" column="1">
-    <widget class="QWidget" name="region" native="true">
-     <layout class="QVBoxLayout" name="verticalLayout_2">
+   <item row="1" column="1">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QLineEdit" name="key">
+       <property name="inputMask">
+        <string notr="true"/>
+       </property>
+       <property name="text">
+        <string notr="true"/>
+       </property>
+       <property name="echoMode">
+        <enum>QLineEdit::Password</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="show">
+       <property name="text">
+        <string>Show</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="3" column="1">
+    <widget class="QCheckBox" name="doBandwidthTest">
+     <property name="text">
+      <string>Basic.AutoConfig.StreamPage.PerformBandwidthTest</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0">
+    <widget class="QLabel" name="bitrateLabel">
+     <property name="text">
+      <string>Basic.Settings.Output.VideoBitrate</string>
+     </property>
+     <property name="buddy">
+      <cstring>bitrate</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="1">
+    <widget class="QSpinBox" name="bitrate">
+     <property name="suffix">
+      <string notr="true"/>
+     </property>
+     <property name="minimum">
+      <number>500</number>
+     </property>
+     <property name="maximum">
+      <number>10000</number>
+     </property>
+     <property name="value">
+      <number>2500</number>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="1">
+    <widget class="QGroupBox" name="region">
+     <property name="title">
+      <string>BandwidthTest.Region</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout">
       <item>
        <widget class="QCheckBox" name="regionUS">
         <property name="text">
@@ -68,39 +140,28 @@
      </layout>
     </widget>
    </item>
-   <item row="3" column="1">
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>40</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="1" column="0">
-    <widget class="QLabel" name="label_2">
+   <item row="2" column="1">
+    <widget class="QCheckBox" name="preferHardware">
      <property name="text">
-      <string>Basic.AutoConfig.StreamPage.StreamKey</string>
+      <string>Basic.AutoConfig.StreamPage.PreferHardwareEncoding</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="1">
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <widget class="QLineEdit" name="lineEdit"/>
-     </item>
-     <item>
-      <widget class="QPushButton" name="show">
-       <property name="text">
-        <string>Show</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
+   <item row="3" column="0">
+    <spacer name="horizontalSpacer">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="sizeType">
+      <enum>QSizePolicy::Fixed</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>90</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
    </item>
   </layout>
  </widget>
