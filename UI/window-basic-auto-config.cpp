@@ -127,13 +127,13 @@ AutoConfigVideoPage::AutoConfigVideoPage(QWidget *parent)
 		: QString::number(fpsVal, 'g', 2);
 
 	ui->fps->addItem(QTStr(FPS_PREFER_HIGH_FPS),
-			(int)FPSType::PreferHighFPS);
+			(int)AutoConfig::FPSType::PreferHighFPS);
 	ui->fps->addItem(QTStr(FPS_PREFER_HIGH_RES),
-			(int)FPSType::PreferHighRes);
+			(int)AutoConfig::FPSType::PreferHighRes);
 	ui->fps->addItem(QTStr(FPS_USE_CURRENT).arg(fpsStr),
-			(int)FPSType::UseCurrent);
-	ui->fps->addItem(QStringLiteral("30"),    (int)FPSType::fps30);
-	ui->fps->addItem(QStringLiteral("60"),    (int)FPSType::fps60);
+			(int)AutoConfig::FPSType::UseCurrent);
+	ui->fps->addItem(QStringLiteral("30"), (int)AutoConfig::FPSType::fps30);
+	ui->fps->addItem(QStringLiteral("60"), (int)AutoConfig::FPSType::fps60);
 	ui->fps->setCurrentIndex(0);
 
 	QString cxStr = QString::number(ovi.base_width);
@@ -188,34 +188,33 @@ bool AutoConfigVideoPage::validatePage()
 	int encRes = ui->canvasRes->currentData().toInt();
 	wiz->baseResolutionCX = encRes >> 16;
 	wiz->baseResolutionCY = encRes & 0xFFFF;
-
-	FPSType fpsType = (FPSType)ui->fps->currentData().toInt();
+	wiz->fpsType = (AutoConfig::FPSType)ui->fps->currentData().toInt();
 
 	obs_video_info ovi;
 	obs_get_video_info(&ovi);
 
-	switch (fpsType) {
-	case FPSType::PreferHighFPS:
+	switch (wiz->fpsType) {
+	case AutoConfig::FPSType::PreferHighFPS:
 		wiz->specificFPSNum = 0;
 		wiz->specificFPSDen = 0;
 		wiz->preferHighFPS = true;
 		break;
-	case FPSType::PreferHighRes:
+	case AutoConfig::FPSType::PreferHighRes:
 		wiz->specificFPSNum = 0;
 		wiz->specificFPSDen = 0;
 		wiz->preferHighFPS = false;
 		break;
-	case FPSType::UseCurrent:
+	case AutoConfig::FPSType::UseCurrent:
 		wiz->specificFPSNum = ovi.fps_num;
 		wiz->specificFPSDen = ovi.fps_den;
 		wiz->preferHighFPS = false;
 		break;
-	case FPSType::fps30:
+	case AutoConfig::FPSType::fps30:
 		wiz->specificFPSNum = 30;
 		wiz->specificFPSDen = 1;
 		wiz->preferHighFPS = false;
 		break;
-	case FPSType::fps60:
+	case AutoConfig::FPSType::fps60:
 		wiz->specificFPSNum = 60;
 		wiz->specificFPSDen = 1;
 		wiz->preferHighFPS = false;
@@ -310,20 +309,20 @@ bool AutoConfigStreamPage::validatePage()
 	wiz->regionEU = ui->regionEU->isChecked();
 	wiz->regionAsia = ui->regionAsia->isChecked();
 	wiz->regionOther = ui->regionOther->isChecked();
-	wiz->service = QT_TO_UTF8(ui->service->currentText());
+	wiz->serviceName = QT_TO_UTF8(ui->service->currentText());
 	if (ui->preferHardware)
 		wiz->preferHardware = ui->preferHardware->isChecked();
 	wiz->key = QT_TO_UTF8(ui->key->text());
 
-	if (wiz->service == "Twitch") {
-		wiz->serviceType = AutoConfig::Service::Twitch;
+	if (wiz->serviceName == "Twitch") {
+		wiz->service = AutoConfig::Service::Twitch;
 		wiz->key += "?bandwidthtest";
-	} else if (wiz->service == "hitbox.tv") {
-		wiz->serviceType = AutoConfig::Service::Hitbox;
-	} else if (wiz->service == "beam.pro") {
-		wiz->serviceType = AutoConfig::Service::Beam;
+	} else if (wiz->serviceName == "hitbox.tv") {
+		wiz->service = AutoConfig::Service::Hitbox;
+	} else if (wiz->serviceName == "beam.pro") {
+		wiz->service = AutoConfig::Service::Beam;
 	} else {
-		wiz->serviceType = AutoConfig::Service::Other;
+		wiz->service = AutoConfig::Service::Other;
 	}
 
 	return true;
@@ -376,7 +375,7 @@ AutoConfig::AutoConfig(QWidget *parent)
 {
 	OBSBasic *main = reinterpret_cast<OBSBasic*>(parent);
 
-	GetServiceInfo(service, key);
+	GetServiceInfo(serviceName, key);
 #ifdef _WIN32
 	setWizardStyle(QWizard::ModernStyle);
 #endif
@@ -394,7 +393,7 @@ AutoConfig::AutoConfig(QWidget *parent)
 	baseResolutionCX = ovi.base_width;
 	baseResolutionCY = ovi.base_height;
 
-	if (!service.empty()) {
+	if (!serviceName.empty()) {
 		QComboBox *serviceList = streamPage->ui->service;
 
 		int count = serviceList->count();
@@ -403,7 +402,7 @@ AutoConfig::AutoConfig(QWidget *parent)
 		for (int i = 0; i < count; i++) {
 			QString name = serviceList->itemText(i);
 
-			if (name == service.c_str()) {
+			if (name == serviceName.c_str()) {
 				serviceList->setCurrentIndex(i);
 				found = true;
 				break;
@@ -411,7 +410,7 @@ AutoConfig::AutoConfig(QWidget *parent)
 		}
 
 		if (!found) {
-			serviceList->insertItem(0, service.c_str());
+			serviceList->insertItem(0, serviceName.c_str());
 			serviceList->setCurrentIndex(0);
 		}
 	}
@@ -441,7 +440,6 @@ void AutoConfig::TestHardwareEncoding()
 			hardwareEncodingAvailable = qsvAvailable = true;
 		else if (strcmp(id, "amd_amf_h264") == 0)
 			hardwareEncodingAvailable = vceAvailable = true;
-			
 	}
 }
 
@@ -450,7 +448,7 @@ bool AutoConfig::CanTestServer(const char *server)
 	if (!testRegions || (regionUS && regionEU && regionAsia && regionOther))
 		return true;
 
-	if (serviceType == Service::Twitch) {
+	if (service == Service::Twitch) {
 		if (astrcmp_n(server, "US West:", 8) == 0 ||
 		    astrcmp_n(server, "US East:", 8) == 0 ||
 		    astrcmp_n(server, "US Central:", 11) == 0 ||
@@ -463,7 +461,7 @@ bool AutoConfig::CanTestServer(const char *server)
 		} else if (regionOther) {
 			return true;
 		}
-	} else if (serviceType == Service::Hitbox) {
+	} else if (service == Service::Hitbox) {
 		if (strcmp(server, "Default") == 0) {
 			return true;
 		} else if (astrcmp_n(server, "US-West:", 8) == 0 ||
@@ -478,7 +476,7 @@ bool AutoConfig::CanTestServer(const char *server)
 		} else if (regionOther) {
 			return true;
 		}
-	} else if (serviceType == Service::Beam) {
+	} else if (service == Service::Beam) {
 		if (astrcmp_n(server, "US:", 3) == 0 ||
 		    astrcmp_n(server, "Canada:", 7) == 0) {
 			return regionUS;
@@ -495,4 +493,102 @@ bool AutoConfig::CanTestServer(const char *server)
 	}
 
 	return false;
+}
+
+void AutoConfig::done(int result)
+{
+	QWizard::done(result);
+
+	if (result == QDialog::Accepted) {
+		if (serviceType == ServiceType::Common) {
+			if (type == Type::Streaming)
+				SaveStreamSettings();
+			SaveSettings();
+		}
+	}
+}
+
+inline const char *AutoConfig::GetEncoderId(Encoder enc)
+{
+	switch (enc) {
+	case Encoder::NVENC:
+		return SIMPLE_ENCODER_NVENC;
+	case Encoder::QSV:
+		return SIMPLE_ENCODER_QSV;
+	case Encoder::AMD:
+		return SIMPLE_ENCODER_AMD;
+	default:
+		return SIMPLE_ENCODER_X264;
+	}
+};
+
+void AutoConfig::SaveStreamSettings()
+{
+	OBSBasic *main = reinterpret_cast<OBSBasic*>(App()->GetMainWindow());
+
+	/* ---------------------------------- */
+	/* save service                       */
+
+	const char *service_id = serviceType == ServiceType::Common
+		? "rtmp_common"
+		: "rtmp_custom";
+
+	obs_service_t *oldService = main->GetService();
+	OBSData hotkeyData = obs_hotkeys_save_service(oldService);
+	obs_data_release(hotkeyData);
+
+	OBSData settings = obs_data_create();
+	obs_data_release(settings);
+
+	if (serviceType == ServiceType::Common)
+		obs_data_set_string(settings, "service", serviceName.c_str());
+	obs_data_set_string(settings, "server", server.c_str());
+	obs_data_set_string(settings, "key", key.c_str());
+
+	OBSService newService = obs_service_create(service_id,
+			"default_service", settings, hotkeyData);
+	obs_service_release(newService);
+
+	if (!newService)
+		return;
+
+	main->SetService(newService);
+	main->SaveService();
+
+	/* ---------------------------------- */
+	/* save stream settings               */
+
+	config_set_int(main->Config(), "SimpleOutput", "VBitrate",
+			idealBitrate);
+	config_set_string(main->Config(), "SimpleOutput", "StreamEncoder",
+			GetEncoderId(streamingEncoder));
+}
+
+void AutoConfig::SaveSettings()
+{
+	OBSBasic *main = reinterpret_cast<OBSBasic*>(App()->GetMainWindow());
+
+	if (recordingEncoder != Encoder::Stream)
+		config_set_string(main->Config(), "SimpleOutput", "RecEncoder",
+				GetEncoderId(recordingEncoder));
+
+	const char *quality = recordingQuality == Quality::High
+		? "Small"
+		: "Stream";
+
+	config_set_string(main->Config(), "Output", "Mode", "Simple");
+	config_set_string(main->Config(), "SimpleOutput", "RecQuality", quality);
+	config_set_int(main->Config(), "Video", "BaseCX", baseResolutionCX);
+	config_set_int(main->Config(), "Video", "BaseCY", baseResolutionCY);
+	config_set_int(main->Config(), "Video", "OutputCX", idealResolutionCX);
+	config_set_int(main->Config(), "Video", "OutputCY", idealResolutionCY);
+
+	if (fpsType != FPSType::UseCurrent) {
+		config_set_uint(main->Config(), "Video", "FPSType", 0);
+		config_set_string(main->Config(), "Video", "FPSCommon",
+				std::to_string(idealFPSNum).c_str());
+	}
+
+	main->ResetOutputs();
+	config_save_safe(main->Config(), "tmp", nullptr);
 }

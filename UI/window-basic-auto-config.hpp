@@ -31,6 +31,11 @@ class AutoConfig : public QWizard {
 		Recording
 	};
 
+	enum class ServiceType {
+		Common,
+		Other
+	};
+
 	enum class Service {
 		Twitch,
 		Hitbox,
@@ -51,11 +56,23 @@ class AutoConfig : public QWizard {
 		High
 	};
 
-	Service serviceType = Service::Other;
+	enum class FPSType : int {
+		PreferHighFPS,
+		PreferHighRes,
+		UseCurrent,
+		fps30,
+		fps60
+	};
+
+	static inline const char *GetEncoderId(Encoder enc);
+
+	ServiceType serviceType = ServiceType::Common;
+	Service service = Service::Other;
 	Quality recordingQuality = Quality::Stream;
 	Encoder recordingEncoder = Encoder::Stream;
 	Encoder streamingEncoder = Encoder::x264;
 	Type type = Type::Invalid;
+	FPSType fpsType = FPSType::PreferHighFPS;
 	int idealBitrate = 2500;
 	int baseResolutionCX = 1920;
 	int baseResolutionCY = 1080;
@@ -63,7 +80,7 @@ class AutoConfig : public QWizard {
 	int idealResolutionCY = 720;
 	int idealFPSNum = 60;
 	int idealFPSDen = 1;
-	std::string service;
+	std::string serviceName;
 	std::string serverName;
 	std::string server;
 	std::string key;
@@ -87,6 +104,11 @@ class AutoConfig : public QWizard {
 
 	void TestHardwareEncoding();
 	bool CanTestServer(const char *server);
+
+	virtual void done(int result) override;
+
+	void SaveStreamSettings();
+	void SaveSettings();
 
 public:
 	AutoConfig(QWidget *parent);
@@ -125,14 +147,6 @@ class AutoConfigVideoPage : public QWizardPage {
 	friend class AutoConfig;
 
 	Ui_AutoConfigVideoPage *ui;
-
-	enum class FPSType : int {
-		PreferHighFPS,
-		PreferHighRes,
-		UseCurrent,
-		fps30,
-		fps60
-	};
 
 public:
 	AutoConfigVideoPage(QWidget *parent = nullptr);
@@ -192,7 +206,7 @@ class AutoConfigTestPage : public QWizardPage {
 	void StartStreamEncoderStage();
 	void StartRecordingEncoderStage();
 
-	void FindIdealHardwareStreamResolution();
+	void FindIdealHardwareResolution();
 	bool TestSoftwareEncoding();
 
 	void TestBandwidthThread();
@@ -228,4 +242,5 @@ public slots:
 	void NextStage();
 	void UpdateMessage(QString message);
 	void Failure(QString message);
+	void Progress(int percentage);
 };

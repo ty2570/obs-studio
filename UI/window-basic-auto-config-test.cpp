@@ -82,12 +82,6 @@ public:
 
 		obs_reset_video(&newOVI);
 	}
-
-	inline void GetBaseRes(int &cx, int &cy)
-	{
-		cx = (int)ovi.base_width;
-		cy = (int)ovi.base_height;
-	}
 };
 
 /* ------------------------------------------------------------------------- */
@@ -129,7 +123,7 @@ void AutoConfigTestPage::GetServers(std::vector<ServerInfo> &servers)
 {
 	OBSData settings = obs_data_create();
 	obs_data_release(settings);
-	obs_data_set_string(settings, "service", wiz->service.c_str());
+	obs_data_set_string(settings, "service", wiz->serviceName.c_str());
 
 	obs_properties_t *ppts = obs_get_service_properties("rtmp_common");
 	obs_property_t *p = obs_properties_get(ppts, "service");
@@ -159,6 +153,8 @@ void AutoConfigTestPage::TestBandwidthThread()
 
 	TestMode testMode;
 	testMode.SetVideo(128, 128, 60, 1);
+
+	QMetaObject::invokeMethod(this, "Progress", Q_ARG(int, 0));
 
 	/*
 	 * create encoders
@@ -204,7 +200,8 @@ void AutoConfigTestPage::TestBandwidthThread()
 	obs_data_release(aencoder_settings);
 	obs_data_release(output_settings);
 
-	obs_data_set_string(service_settings, "service", wiz->service.c_str());
+	obs_data_set_string(service_settings, "service",
+			wiz->serviceName.c_str());
 	obs_data_set_string(service_settings, "key", wiz->key.c_str());
 
 	obs_data_set_int(vencoder_settings, "bitrate", wiz->startingBitrate);
@@ -292,10 +289,14 @@ void AutoConfigTestPage::TestBandwidthThread()
 
 	bool success = false;
 
-	for (auto &server : servers) {
+	for (size_t i = 0; i < servers.size(); i++) {
+		auto &server = servers[i];
+
 		connected = false;
 		stopped = false;
 
+		int per = int((i + 1) * 100 / servers.size());
+		QMetaObject::invokeMethod(this, "Progress", Q_ARG(int, per));
 		QMetaObject::invokeMethod(this, "UpdateMessage",
 				Q_ARG(QString, QTStr(TEST_BW_CONNECTING)
 					.arg(server.name.c_str())));
@@ -509,8 +510,8 @@ bool AutoConfigTestPage::TestSoftwareEncoding()
 	/* -----------------------------------*/
 	/* calculate starting resolution      */
 
-	int baseCX, baseCY;
-	testMode.GetBaseRes(baseCX, baseCY);
+	int baseCX = wiz->baseResolutionCX;
+	int baseCY = wiz->baseResolutionCY;
 	CalcBaseRes(baseCX, baseCY);
 
 	/* -----------------------------------*/
@@ -540,10 +541,15 @@ bool AutoConfigTestPage::TestSoftwareEncoding()
 	/* perform tests                      */
 
 	vector<Result> results;
+	int i = 0;
+	int count = 1;
 
 	auto testRes = [&] (long double div, int fps_num, int fps_den,
 			bool force)
 	{
+		int per = ++i * 100 / count;
+		QMetaObject::invokeMethod(this, "Progress", Q_ARG(int, per));
+
 		/* no need for more than 3 tests max */
 		if (results.size() >= 3)
 			return true;
@@ -611,12 +617,14 @@ bool AutoConfigTestPage::TestSoftwareEncoding()
 	};
 
 	if (wiz->specificFPSNum && wiz->specificFPSDen) {
+		count = 5;
 		if (!testRes(1.0, 0, 0, false)) return false;
 		if (!testRes(1.5, 0, 0, false)) return false;
 		if (!testRes(1.0 / 0.6, 0, 0, false)) return false;
 		if (!testRes(2.0, 0, 0, false)) return false;
 		if (!testRes(2.25, 0, 0, true)) return false;
 	} else {
+		count = 10;
 		if (!testRes(1.0, 60, 1, false)) return false;
 		if (!testRes(1.0, 30, 1, false)) return false;
 		if (!testRes(1.5, 60, 1, false)) return false;
@@ -655,30 +663,46 @@ bool AutoConfigTestPage::TestSoftwareEncoding()
 	return true;
 }
 
-void AutoConfigTestPage::FindIdealHardwareStreamResolution()
+void AutoConfigTestPage::FindIdealHardwareResolution()
 {
-	obs_video_info ovi;
-	obs_get_video_info(&ovi);
-
-	int baseCX = ovi.base_width;
-	int baseCY = ovi.base_height;
+	int baseCX = wiz->baseResolutionCX;
+	int baseCY = wiz->baseResolutionCY;
 	CalcBaseRes(baseCX, baseCY);
 
 	vector<Result> results;
 
+	int pcores = os_get_physical_cores();
+	int maxDataRate;
+	if (pcores >= 4) {
+		maxDataRate = 1920 * 1200 * 60 + 1000;
+	} else {
+		maxDataRate = 1280 * 720 * 30 + 1000;
+	}
+
 	auto testRes = [&] (long double div, int fps_num, int fps_den,
 			bool force)
 	{
-		int cx = int((long double)baseCX / div);
-		int cy = int((long double)baseCY / div);
+		if (results.size() >= 3)
+			return;
 
 		if (!fps_num || !fps_den) {
 			fps_num = wiz->specificFPSNum;
 			fps_den = wiz->specificFPSDen;
 		}
 
+		long double fps = ((long double)fps_num / (long double)fps_den);
+
+		int cx = int((long double)baseCX / div);
+		int cy = int((long double)baseCY / div);
+
+		long double rate = (long double)cx * (long double)cy * fps;
+		if (!force && rate > maxDataRate)
+			return;
+
 		int minBitrate = EstimateMinBitrate(cx, cy, fps_num, fps_den)
 			* 12 / 10;
+		if (wiz->type == AutoConfig::Type::Recording)
+			force = true;
 		if (force || wiz->idealBitrate >= minBitrate)
 			results.emplace_back(cx, cy, fps_num, fps_den);
 	};
@@ -734,7 +758,7 @@ void AutoConfigTestPage::TestStreamEncoderThread()
 	}
 
 	if (preferHardware && !softwareTested && wiz->hardwareEncodingAvailable)
-		FindIdealHardwareStreamResolution();
+		FindIdealHardwareResolution();
 
 	if (!softwareTested) {
 		if (wiz->nvencAvailable)
@@ -757,6 +781,10 @@ void AutoConfigTestPage::TestRecordingEncoderThread()
 			return;
 		}
 	}
+
+	if (wiz->type == AutoConfig::Type::Recording &&
+	    wiz->hardwareEncodingAvailable)
+		FindIdealHardwareResolution();
 
 	wiz->recordingQuality = AutoConfig::Quality::High;
 
@@ -820,7 +848,7 @@ void AutoConfigTestPage::FinalizeResults()
 
 	if (wiz->type != AutoConfig::Type::Recording) {
 		form->addRow(newLabel("Basic.AutoConfig.StreamPage.Service"),
-			new QLabel(wiz->service.c_str(), ui->finishPage));
+			new QLabel(wiz->serviceName.c_str(), ui->finishPage));
 		form->addRow(newLabel("Basic.AutoConfig.StreamPage.Server"),
 			new QLabel(wiz->serverName.c_str(), ui->finishPage));
 		form->addRow(newLabel("Basic.Settings.Output.VideoBitrate"),
@@ -892,22 +920,18 @@ void AutoConfigTestPage::NextStage()
 	}
 
 	if (stage == Stage::Starting) {
-		ui->progressBar->setValue(0);
 		stage = Stage::BandwidthTest;
 		StartBandwidthStage();
 
 	} else if (stage == Stage::BandwidthTest) {
-		ui->progressBar->setValue(33);
 		stage = Stage::StreamEncoder;
 		StartStreamEncoderStage();
 
 	} else if (stage == Stage::StreamEncoder) {
-		ui->progressBar->setValue(66);
 		stage = Stage::RecordingEncoder;
 		StartRecordingEncoderStage();
 
 	} else {
-		ui->progressBar->setValue(100);
 		stage = Stage::Finished;
 		FinalizeResults();
 		emit completeChanged();
@@ -923,6 +947,11 @@ void AutoConfigTestPage::Failure(QString message)
 {
 	ui->errorLabel->setText(message);
 	ui->stackedWidget->setCurrentIndex(2);
+}
+
+void AutoConfigTestPage::Progress(int percentage)
+{
+	ui->progressBar->setValue(percentage);
 }
 
 AutoConfigTestPage::AutoConfigTestPage(QWidget *parent)
@@ -956,7 +985,7 @@ void AutoConfigTestPage::initializePage()
 	softwareTested = false;
 	cancel = false;
 	DeleteLayout(results);
-	results = new QFormLayout(this);
+	results = new QFormLayout();
 	results->setContentsMargins(0, 0, 0, 0);
 	ui->finishPageLayout->insertLayout(1, results);
 	ui->stackedWidget->setCurrentIndex(0);
