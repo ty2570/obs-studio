@@ -17,10 +17,8 @@
 
 #define SERVICE_PATH "service.json"
 
-static OBSData OpenServiceSettings()
+static OBSData OpenServiceSettings(std::string &type)
 {
-	const char *type;
-
 	char serviceJsonPath[512];
 	int ret = GetProfilePath(serviceJsonPath, sizeof(serviceJsonPath),
 			SERVICE_PATH);
@@ -34,20 +32,19 @@ static OBSData OpenServiceSettings()
 	obs_data_set_default_string(data, "type", "rtmp_common");
 	type = obs_data_get_string(data, "type");
 
-	if (type && strcmp(type, "rtmp_common") != 0)
-		return OBSData();
-
 	OBSData settings = obs_data_get_obj(data, "settings");
 	obs_data_release(settings);
 
 	return settings;
 }
 
-static void GetServiceInfo(std::string &service, std::string &key)
+static void GetServiceInfo(std::string &type, std::string &service,
+		std::string &server, std::string &key)
 {
-	OBSData settings = OpenServiceSettings();
+	OBSData settings = OpenServiceSettings(type);
 
 	service = obs_data_get_string(settings, "service");
+	server = obs_data_get_string(settings, "server");
 	key = obs_data_get_string(settings, "key");
 }
 
@@ -234,6 +231,9 @@ AutoConfigStreamPage::AutoConfigStreamPage(QWidget *parent)
 	ui->bitrateLabel->setVisible(false);
 	ui->bitrate->setVisible(false);
 
+	ui->streamType->addItem(obs_service_get_display_name("rtmp_common"));
+	ui->streamType->addItem(obs_service_get_display_name("rtmp_custom"));
+
 	setTitle(QTStr("Basic.AutoConfig.StreamPage"));
 	setSubTitle(QTStr("Basic.AutoConfig.StreamPage.SubTitle"));
 
@@ -248,14 +248,21 @@ AutoConfigStreamPage::AutoConfigStreamPage(QWidget *parent)
 
 	obs_properties_destroy(props);
 
+	connect(ui->streamType, SIGNAL(currentIndexChanged(int)),
+			this, SLOT(ServiceChanged()));
 	connect(ui->service, SIGNAL(currentIndexChanged(int)),
+			this, SLOT(ServiceChanged()));
+	connect(ui->customServer, SIGNAL(textChanged(const QString &)),
 			this, SLOT(ServiceChanged()));
 	connect(ui->doBandwidthTest, SIGNAL(toggled(bool)),
 			this, SLOT(ServiceChanged()));
 
+	connect(ui->service, SIGNAL(currentIndexChanged(int)),
+			this, SLOT(UpdateServerList()));
+
 	connect(ui->key, SIGNAL(textChanged(const QString &)),
 			this, SLOT(UpdateCompleted()));
-	connect(ui->regionUS, SIGNAL(toggled(bool)),
+	connect(ui->regionNA, SIGNAL(toggled(bool)),
 			this, SLOT(UpdateCompleted()));
 	connect(ui->regionEU, SIGNAL(toggled(bool)),
 			this, SLOT(UpdateCompleted()));
@@ -291,6 +298,8 @@ bool AutoConfigStreamPage::validatePage()
 			service_settings, nullptr);
 	obs_service_release(service);
 
+	wiz->customServer = ui->streamType->currentIndex() == 1;
+
 	int bitrate = 6000;
 	if (!ui->doBandwidthTest->isChecked()) {
 		bitrate = ui->bitrate->value();
@@ -302,10 +311,18 @@ bool AutoConfigStreamPage::validatePage()
 	obs_data_set_int(settings, "bitrate", bitrate);
 	obs_service_apply_encoder_settings(service, settings, nullptr);
 
+	if (wiz->customServer) {
+		QString server = ui->customServer->text();
+		wiz->server = wiz->serverName = QT_TO_UTF8(server);
+	} else {
+		wiz->serverName = QT_TO_UTF8(ui->server->currentText());
+		wiz->server = QT_TO_UTF8(ui->server->currentData().toString());
+	}
+
 	wiz->bandwidthTest = ui->doBandwidthTest->isChecked();
 	wiz->startingBitrate = (int)obs_data_get_int(settings, "bitrate");
 	wiz->idealBitrate = wiz->startingBitrate;
-	wiz->regionUS = ui->regionUS->isChecked();
+	wiz->regionNA = ui->regionNA->isChecked();
 	wiz->regionEU = ui->regionEU->isChecked();
 	wiz->regionAsia = ui->regionAsia->isChecked();
 	wiz->regionOther = ui->regionOther->isChecked();
@@ -314,15 +331,17 @@ bool AutoConfigStreamPage::validatePage()
 		wiz->preferHardware = ui->preferHardware->isChecked();
 	wiz->key = QT_TO_UTF8(ui->key->text());
 
-	if (wiz->serviceName == "Twitch") {
-		wiz->service = AutoConfig::Service::Twitch;
-		wiz->key += "?bandwidthtest";
-	} else if (wiz->serviceName == "hitbox.tv") {
-		wiz->service = AutoConfig::Service::Hitbox;
-	} else if (wiz->serviceName == "beam.pro") {
-		wiz->service = AutoConfig::Service::Beam;
-	} else {
-		wiz->service = AutoConfig::Service::Other;
+	if (!wiz->customServer) {
+		if (wiz->serviceName == "Twitch") {
+			wiz->service = AutoConfig::Service::Twitch;
+			wiz->key += "?bandwidthtest";
+		} else if (wiz->serviceName == "hitbox.tv") {
+			wiz->service = AutoConfig::Service::Hitbox;
+		} else if (wiz->serviceName == "beam.pro") {
+			wiz->service = AutoConfig::Service::Beam;
+		} else {
+			wiz->service = AutoConfig::Service::Other;
+		}
 	}
 
 	return true;
@@ -346,25 +365,73 @@ void AutoConfigStreamPage::ServiceChanged()
 	                   service == "hitbox.tv" ||
 	                   service == "beam.pro";
 	bool testBandwidth = ui->doBandwidthTest->isChecked();
+	bool custom = ui->streamType->currentIndex() == 1;
+
+	ui->service->setVisible(!custom);
+	ui->serviceLabel->setVisible(!custom);
+
+	if (custom) {
+		ui->region->setVisible(false);
+		ui->serverStackedWidget->setCurrentIndex(1);
+		ui->serverStackedWidget->setVisible(true);
+		ui->serverLabel->setVisible(true);
+	} else {
+		ui->region->setVisible(regionBased && testBandwidth);
+		ui->serverStackedWidget->setCurrentIndex(0);
+		ui->serverStackedWidget->setVisible(!testBandwidth);
+		ui->serverLabel->setVisible(!testBandwidth);
+	}
 
 	wiz->testRegions = regionBased && testBandwidth;
 
-	ui->region->setVisible(regionBased && testBandwidth);
 	ui->bitrateLabel->setHidden(testBandwidth);
 	ui->bitrate->setHidden(testBandwidth);
 	UpdateCompleted();	
 }
 
+void AutoConfigStreamPage::UpdateServerList()
+{
+	QString serviceName = ui->service->currentText();
+
+	obs_properties_t *props = obs_get_service_properties("rtmp_common");
+	obs_property_t *services = obs_properties_get(props, "service");
+
+	OBSData settings = obs_data_create();
+	obs_data_release(settings);
+
+	obs_data_set_string(settings, "service", QT_TO_UTF8(serviceName));
+	obs_property_modified(services, settings);
+
+	obs_property_t *servers = obs_properties_get(props, "server");
+
+	ui->server->clear();
+
+	size_t servers_count = obs_property_list_item_count(servers);
+	for (size_t i = 0; i < servers_count; i++) {
+		const char *name = obs_property_list_item_name(servers, i);
+		const char *server = obs_property_list_item_string(servers, i);
+		ui->server->addItem(name, server);
+	}
+
+	obs_properties_destroy(props);
+}
+
 void AutoConfigStreamPage::UpdateCompleted()
 {
-	if (ui->key->text().isEmpty())
+	if (ui->key->text().isEmpty()) {
 		ready = false;
-	else
-		ready = !wiz->testRegions ||
-			ui->regionUS->isChecked() ||
-			ui->regionEU->isChecked() ||
-			ui->regionAsia->isChecked() ||
-			ui->regionOther->isChecked();
+	} else {
+		bool custom = ui->streamType->currentIndex() == 1;
+		if (custom) {
+			ready = !ui->customServer->text().isEmpty();
+		} else {
+			ready = !wiz->testRegions ||
+				ui->regionNA->isChecked() ||
+				ui->regionEU->isChecked() ||
+				ui->regionAsia->isChecked() ||
+				ui->regionOther->isChecked();
+		}
+	}
 	emit completeChanged();
 }
 
@@ -375,7 +442,8 @@ AutoConfig::AutoConfig(QWidget *parent)
 {
 	OBSBasic *main = reinterpret_cast<OBSBasic*>(parent);
 
-	GetServiceInfo(serviceName, key);
+	std::string serviceType;
+	GetServiceInfo(serviceType, serviceName, server, key);
 #ifdef _WIN32
 	setWizardStyle(QWizard::ModernStyle);
 #endif
@@ -393,8 +461,15 @@ AutoConfig::AutoConfig(QWidget *parent)
 	baseResolutionCX = ovi.base_width;
 	baseResolutionCY = ovi.base_height;
 
+	/* ----------------------------------------- */
+	/* load service/servers                      */
+
+	customServer = serviceType == "rtmp_custom";
+
+	QComboBox *serviceList = streamPage->ui->service;
+
 	if (!serviceName.empty()) {
-		QComboBox *serviceList = streamPage->ui->service;
+		serviceList->blockSignals(true);
 
 		int count = serviceList->count();
 		bool found = false;
@@ -413,6 +488,22 @@ AutoConfig::AutoConfig(QWidget *parent)
 			serviceList->insertItem(0, serviceName.c_str());
 			serviceList->setCurrentIndex(0);
 		}
+
+		serviceList->blockSignals(false);
+	}
+
+	streamPage->UpdateServerList();
+
+	if (!customServer) {
+		QComboBox *serverList = streamPage->ui->server;
+		int idx = serverList->findData(QString(server.c_str()));
+		if (idx == -1)
+			idx = 0;
+
+		serverList->setCurrentIndex(idx);
+	} else {
+		streamPage->ui->customServer->setText(server.c_str());
+		streamPage->ui->streamType->setCurrentIndex(1);
 	}
 
 	if (!key.empty())
@@ -445,7 +536,7 @@ void AutoConfig::TestHardwareEncoding()
 
 bool AutoConfig::CanTestServer(const char *server)
 {
-	if (!testRegions || (regionUS && regionEU && regionAsia && regionOther))
+	if (!testRegions || (regionNA && regionEU && regionAsia && regionOther))
 		return true;
 
 	if (service == Service::Twitch) {
@@ -453,7 +544,7 @@ bool AutoConfig::CanTestServer(const char *server)
 		    astrcmp_n(server, "US East:", 8) == 0 ||
 		    astrcmp_n(server, "US Central:", 11) == 0 ||
 		    astrcmp_n(server, "NA:", 3) == 0) {
-			return regionUS;
+			return regionNA;
 		} else if (astrcmp_n(server, "EU:", 3) == 0) {
 			return regionEU;
 		} else if (astrcmp_n(server, "Asia:", 5) == 0) {
@@ -466,7 +557,7 @@ bool AutoConfig::CanTestServer(const char *server)
 			return true;
 		} else if (astrcmp_n(server, "US-West:", 8) == 0 ||
 		           astrcmp_n(server, "US-East:", 8) == 0) {
-			return regionUS;
+			return regionNA;
 		} else if (astrcmp_n(server, "EU-", 3) == 0) {
 			return regionEU;
 		} else if (astrcmp_n(server, "South Korea:", 12) == 0 ||
@@ -479,7 +570,7 @@ bool AutoConfig::CanTestServer(const char *server)
 	} else if (service == Service::Beam) {
 		if (astrcmp_n(server, "US:", 3) == 0 ||
 		    astrcmp_n(server, "Canada:", 7) == 0) {
-			return regionUS;
+			return regionNA;
 		} else if (astrcmp_n(server, "EU:", 3) == 0) {
 			return regionEU;
 		} else if (astrcmp_n(server, "South Korea:", 12) == 0 ||
@@ -500,11 +591,9 @@ void AutoConfig::done(int result)
 	QWizard::done(result);
 
 	if (result == QDialog::Accepted) {
-		if (serviceType == ServiceType::Common) {
-			if (type == Type::Streaming)
-				SaveStreamSettings();
-			SaveSettings();
-		}
+		if (type == Type::Streaming)
+			SaveStreamSettings();
+		SaveSettings();
 	}
 }
 
@@ -529,9 +618,9 @@ void AutoConfig::SaveStreamSettings()
 	/* ---------------------------------- */
 	/* save service                       */
 
-	const char *service_id = serviceType == ServiceType::Common
-		? "rtmp_common"
-		: "rtmp_custom";
+	const char *service_id = customServer
+		? "rtmp_custom"
+		: "rtmp_common";
 
 	obs_service_t *oldService = main->GetService();
 	OBSData hotkeyData = obs_hotkeys_save_service(oldService);
@@ -540,7 +629,7 @@ void AutoConfig::SaveStreamSettings()
 	OBSData settings = obs_data_create();
 	obs_data_release(settings);
 
-	if (serviceType == ServiceType::Common)
+	if (!customServer)
 		obs_data_set_string(settings, "service", serviceName.c_str());
 	obs_data_set_string(settings, "server", server.c_str());
 	obs_data_set_string(settings, "key", key.c_str());
@@ -589,6 +678,7 @@ void AutoConfig::SaveSettings()
 				std::to_string(idealFPSNum).c_str());
 	}
 
+	main->ResetVideo();
 	main->ResetOutputs();
 	config_save_safe(main->Config(), "tmp", nullptr);
 }

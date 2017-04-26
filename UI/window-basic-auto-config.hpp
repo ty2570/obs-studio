@@ -31,11 +31,6 @@ class AutoConfig : public QWizard {
 		Recording
 	};
 
-	enum class ServiceType {
-		Common,
-		Other
-	};
-
 	enum class Service {
 		Twitch,
 		Hitbox,
@@ -66,7 +61,6 @@ class AutoConfig : public QWizard {
 
 	static inline const char *GetEncoderId(Encoder enc);
 
-	ServiceType serviceType = ServiceType::Common;
 	Service service = Service::Other;
 	Quality recordingQuality = Quality::Stream;
 	Encoder recordingEncoder = Encoder::Stream;
@@ -91,9 +85,10 @@ class AutoConfig : public QWizard {
 	bool vceAvailable = false;
 
 	int startingBitrate = 2500;
+	bool customServer = false;
 	bool bandwidthTest = false;
 	bool testRegions = true;
-	bool regionUS = true;
+	bool regionNA = true;
 	bool regionEU = true;
 	bool regionAsia = true;
 	bool regionOther = true;
@@ -175,6 +170,7 @@ public:
 public slots:
 	void on_show_clicked();
 	void ServiceChanged();
+	void UpdateServerList();
 	void UpdateCompleted();
 };
 

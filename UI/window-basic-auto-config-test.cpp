@@ -168,11 +168,15 @@ void AutoConfigTestPage::TestBandwidthThread()
 	/* -----------------------------------*/
 	/* create obs objects                 */
 
+	const char *serverType = wiz->customServer
+		? "rtmp_custom"
+		: "rtmp_common";
+
 	OBSEncoder vencoder = obs_video_encoder_create("obs_x264",
 			"test_x264", nullptr, nullptr);
 	OBSEncoder aencoder = obs_audio_encoder_create("ffmpeg_aac",
 			"test_aac", nullptr, 0, nullptr);
-	OBSService service = obs_service_create("rtmp_common",
+	OBSService service = obs_service_create(serverType,
 			"test_service", nullptr, nullptr);
 	OBSOutput output = obs_output_create("rtmp_output",
 			"test_stream", nullptr, nullptr);
@@ -220,7 +224,10 @@ void AutoConfigTestPage::TestBandwidthThread()
 	/* determine which servers to test    */
 
 	std::vector<ServerInfo> servers;
-	GetServers(servers);
+	if (wiz->customServer)
+		servers.emplace_back(wiz->server.c_str(), wiz->server.c_str());
+	else
+		GetServers(servers);
 
 	/* -----------------------------------*/
 	/* apply settings                     */
@@ -847,8 +854,11 @@ void AutoConfigTestPage::FinalizeResults()
 	};
 
 	if (wiz->type != AutoConfig::Type::Recording) {
-		form->addRow(newLabel("Basic.AutoConfig.StreamPage.Service"),
-			new QLabel(wiz->serviceName.c_str(), ui->finishPage));
+		if (!wiz->customServer)
+			form->addRow(
+				newLabel("Basic.AutoConfig.StreamPage.Service"),
+				new QLabel(wiz->serviceName.c_str(),
+					ui->finishPage));
 		form->addRow(newLabel("Basic.AutoConfig.StreamPage.Server"),
 			new QLabel(wiz->serverName.c_str(), ui->finishPage));
 		form->addRow(newLabel("Basic.Settings.Output.VideoBitrate"),
