@@ -22,6 +22,8 @@
 #include <dlfcn.h>
 #include <time.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/sysctl.h>
 
 #include <CoreServices/CoreServices.h>
 #include <mach/mach.h>
