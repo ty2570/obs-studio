@@ -240,13 +240,18 @@
   </layout>
  </widget>
  <tabstops>
+  <tabstop>streamType</tabstop>
   <tabstop>service</tabstop>
+  <tabstop>server</tabstop>
+  <tabstop>customServer</tabstop>
   <tabstop>key</tabstop>
   <tabstop>show</tabstop>
   <tabstop>preferHardware</tabstop>
   <tabstop>doBandwidthTest</tabstop>
   <tabstop>regionNA</tabstop>
+  <tabstop>regionEU</tabstop>
   <tabstop>regionAsia</tabstop>
+  <tabstop>regionOther</tabstop>
   <tabstop>bitrate</tabstop>
  </tabstops>
  <resources/>

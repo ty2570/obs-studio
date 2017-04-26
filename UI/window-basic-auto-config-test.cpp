@@ -204,9 +204,13 @@ void AutoConfigTestPage::TestBandwidthThread()
 	obs_data_release(aencoder_settings);
 	obs_data_release(output_settings);
 
+	std::string key = wiz->key;
+	if (wiz->service == AutoConfig::Service::Twitch)
+		key += "?bandwidthtest";
+
 	obs_data_set_string(service_settings, "service",
 			wiz->serviceName.c_str());
-	obs_data_set_string(service_settings, "key", wiz->key.c_str());
+	obs_data_set_string(service_settings, "key", key.c_str());
 
 	obs_data_set_int(vencoder_settings, "bitrate", wiz->startingBitrate);
 	obs_data_set_string(vencoder_settings, "rate_control", "CBR");

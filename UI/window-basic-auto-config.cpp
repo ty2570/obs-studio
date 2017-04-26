@@ -332,16 +332,16 @@ bool AutoConfigStreamPage::validatePage()
 	wiz->key = QT_TO_UTF8(ui->key->text());
 
 	if (!wiz->customServer) {
-		if (wiz->serviceName == "Twitch") {
+		if (wiz->serviceName == "Twitch")
 			wiz->service = AutoConfig::Service::Twitch;
-			wiz->key += "?bandwidthtest";
-		} else if (wiz->serviceName == "hitbox.tv") {
+		else if (wiz->serviceName == "hitbox.tv")
 			wiz->service = AutoConfig::Service::Hitbox;
-		} else if (wiz->serviceName == "beam.pro") {
+		else if (wiz->serviceName == "beam.pro")
 			wiz->service = AutoConfig::Service::Beam;
-		} else {
+		else
 			wiz->service = AutoConfig::Service::Other;
-		}
+	} else {
+		wiz->service = AutoConfig::Service::Other;
 	}
 
 	return true;
