@@ -13,7 +13,7 @@
 #include "qt-wrappers.hpp"
 #include "obs-app.hpp"
 
-#include "Ui_AutoConfigTestPage.h"
+#include "ui_AutoConfigTestPage.h"
 
 #define wiz reinterpret_cast<AutoConfig*>(wizard())
 

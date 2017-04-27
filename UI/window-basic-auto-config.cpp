@@ -7,9 +7,9 @@
 
 #include <obs.hpp>
 
-#include "Ui_AutoConfigStartPage.h"
-#include "Ui_AutoConfigVideoPage.h"
-#include "Ui_AutoConfigStreamPage.h"
+#include "ui_AutoConfigStartPage.h"
+#include "ui_AutoConfigVideoPage.h"
+#include "ui_AutoConfigStreamPage.h"
 
 #define wiz reinterpret_cast<AutoConfig*>(wizard())
 
