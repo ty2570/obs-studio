@@ -638,16 +638,17 @@ static void os_get_cores_internal(void)
 	char *text = os_quick_read_utf8_file("/proc/cpuinfo");
 	char *core_id = text;
 
-	if (!text || !*test) {
+	if (!text || !*text) {
 		physical_cores = logical_cores;
 		return;
 	}
 
 	for (;;) {
-		char *core_id = strstr(text, "\ncore id");
+		core_id = strstr(core_id, "\ncore id");
 		if (!core_id)
 			break;
 		physical_cores++;
+		core_id++;
 	}
 
 	if (physical_cores == 0)
