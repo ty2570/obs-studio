@@ -107,6 +107,7 @@ class AutoConfig : public QWizard {
 
 public:
 	AutoConfig(QWidget *parent);
+	~AutoConfig();
 
 	enum Page {
 		StartPage,

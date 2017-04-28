@@ -459,6 +459,9 @@ AutoConfig::AutoConfig(QWidget *parent)
 	: QWizard(parent)
 {
 	OBSBasic *main = reinterpret_cast<OBSBasic*>(parent);
+	main->EnableOutputs(false);
+
+	installEventFilter(CreateShortcutFilter());
 
 	std::string serviceType;
 	GetServiceInfo(serviceType, serviceName, server, key);
@@ -531,11 +534,19 @@ AutoConfig::AutoConfig(QWidget *parent)
 	streamPage->ui->bitrate->setValue(bitrate);
 	streamPage->ServiceChanged();
 
+	streamPage->ui->preferHardware->setChecked(os_get_physical_cores() <= 4);
+
 	TestHardwareEncoding();
 	if (!hardwareEncodingAvailable) {
 		delete streamPage->ui->preferHardware;
 		streamPage->ui->preferHardware = nullptr;
 	}
+}
+
+AutoConfig::~AutoConfig()
+{
+	OBSBasic *main = reinterpret_cast<OBSBasic*>(App()->GetMainWindow());
+	main->EnableOutputs(true);
 }
 
 void AutoConfig::TestHardwareEncoding()
