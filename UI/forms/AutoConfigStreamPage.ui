@@ -20,18 +20,6 @@
    <property name="labelAlignment">
     <set>Qt::AlignRight|Qt::AlignTop|Qt::AlignTrailing</set>
    </property>
-   <property name="leftMargin">
-    <number>0</number>
-   </property>
-   <property name="topMargin">
-    <number>0</number>
-   </property>
-   <property name="rightMargin">
-    <number>0</number>
-   </property>
-   <property name="bottomMargin">
-    <number>0</number>
-   </property>
    <item row="1" column="0">
     <widget class="QLabel" name="serviceLabel">
      <property name="text">
@@ -79,7 +67,7 @@
      </item>
     </layout>
    </item>
-   <item row="5" column="1">
+   <item row="6" column="1">
     <widget class="QCheckBox" name="doBandwidthTest">
      <property name="text">
       <string>Basic.AutoConfig.StreamPage.PerformBandwidthTest</string>
@@ -89,77 +77,17 @@
      </property>
     </widget>
    </item>
-   <item row="7" column="0">
-    <widget class="QLabel" name="bitrateLabel">
-     <property name="text">
-      <string>Basic.Settings.Output.VideoBitrate</string>
-     </property>
-     <property name="buddy">
-      <cstring>bitrate</cstring>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="1">
-    <widget class="QSpinBox" name="bitrate">
-     <property name="suffix">
-      <string notr="true"/>
-     </property>
-     <property name="minimum">
-      <number>500</number>
-     </property>
-     <property name="maximum">
-      <number>10000</number>
-     </property>
-     <property name="value">
-      <number>2500</number>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="1">
-    <widget class="QGroupBox" name="region">
-     <property name="title">
-      <string>BandwidthTest.Region</string>
-     </property>
-     <layout class="QGridLayout" name="gridLayout">
-      <item row="2" column="0">
-       <widget class="QCheckBox" name="regionAsia">
-        <property name="text">
-         <string>BandwidthTest.Region.Asia</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="0">
-       <widget class="QCheckBox" name="regionNA">
-        <property name="text">
-         <string>BandwidthTest.Region.NA</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QCheckBox" name="regionEU">
-        <property name="text">
-         <string>BandwidthTest.Region.EU</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="1">
-       <widget class="QCheckBox" name="regionOther">
-        <property name="text">
-         <string>BandwidthTest.Region.Other</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="4" column="1">
+   <item row="5" column="1">
     <widget class="QCheckBox" name="preferHardware">
      <property name="text">
       <string>Basic.AutoConfig.StreamPage.PreferHardwareEncoding</string>
      </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
     </widget>
    </item>
-   <item row="5" column="0">
+   <item row="6" column="0">
     <spacer name="horizontalSpacer">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
@@ -237,6 +165,69 @@
      </widget>
     </widget>
    </item>
+   <item row="7" column="1">
+    <widget class="QGroupBox" name="region">
+     <property name="title">
+      <string>BandwidthTest.Region</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout">
+      <item row="2" column="0">
+       <widget class="QCheckBox" name="regionAsia">
+        <property name="text">
+         <string>BandwidthTest.Region.Asia</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QCheckBox" name="regionUS">
+        <property name="text">
+         <string>BandwidthTest.Region.US</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QCheckBox" name="regionEU">
+        <property name="text">
+         <string>BandwidthTest.Region.EU</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QCheckBox" name="regionOther">
+        <property name="text">
+         <string>BandwidthTest.Region.Other</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="4" column="1">
+    <widget class="QSpinBox" name="bitrate">
+     <property name="suffix">
+      <string notr="true"/>
+     </property>
+     <property name="minimum">
+      <number>500</number>
+     </property>
+     <property name="maximum">
+      <number>10000</number>
+     </property>
+     <property name="value">
+      <number>2500</number>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QLabel" name="bitrateLabel">
+     <property name="text">
+      <string>Basic.Settings.Output.VideoBitrate</string>
+     </property>
+     <property name="buddy">
+      <cstring>bitrate</cstring>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <tabstops>
@@ -248,11 +239,10 @@
   <tabstop>show</tabstop>
   <tabstop>preferHardware</tabstop>
   <tabstop>doBandwidthTest</tabstop>
-  <tabstop>regionNA</tabstop>
+  <tabstop>regionUS</tabstop>
   <tabstop>regionEU</tabstop>
   <tabstop>regionAsia</tabstop>
   <tabstop>regionOther</tabstop>
-  <tabstop>bitrate</tabstop>
  </tabstops>
  <resources/>
  <connections/>

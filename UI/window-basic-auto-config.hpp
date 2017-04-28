@@ -88,7 +88,7 @@ class AutoConfig : public QWizard {
 	bool customServer = false;
 	bool bandwidthTest = false;
 	bool testRegions = true;
-	bool regionNA = true;
+	bool regionUS = true;
 	bool regionEU = true;
 	bool regionAsia = true;
 	bool regionOther = true;

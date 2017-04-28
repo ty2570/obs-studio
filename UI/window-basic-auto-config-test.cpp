@@ -711,7 +711,7 @@ void AutoConfigTestPage::FindIdealHardwareResolution()
 			return;
 
 		int minBitrate = EstimateMinBitrate(cx, cy, fps_num, fps_den)
-			* 12 / 10;
+			* 114 / 100;
 		if (wiz->type == AutoConfig::Type::Recording)
 			force = true;
 		if (force || wiz->idealBitrate >= minBitrate)

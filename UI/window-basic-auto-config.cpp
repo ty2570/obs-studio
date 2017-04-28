@@ -264,7 +264,7 @@ AutoConfigStreamPage::AutoConfigStreamPage(QWidget *parent)
 
 	connect(ui->key, SIGNAL(textChanged(const QString &)),
 			this, SLOT(UpdateCompleted()));
-	connect(ui->regionNA, SIGNAL(toggled(bool)),
+	connect(ui->regionUS, SIGNAL(toggled(bool)),
 			this, SLOT(UpdateCompleted()));
 	connect(ui->regionEU, SIGNAL(toggled(bool)),
 			this, SLOT(UpdateCompleted()));
@@ -324,7 +324,7 @@ bool AutoConfigStreamPage::validatePage()
 	wiz->bandwidthTest = ui->doBandwidthTest->isChecked();
 	wiz->startingBitrate = (int)obs_data_get_int(settings, "bitrate");
 	wiz->idealBitrate = wiz->startingBitrate;
-	wiz->regionNA = ui->regionNA->isChecked();
+	wiz->regionUS = ui->regionUS->isChecked();
 	wiz->regionEU = ui->regionEU->isChecked();
 	wiz->regionAsia = ui->regionAsia->isChecked();
 	wiz->regionOther = ui->regionOther->isChecked();
@@ -372,22 +372,38 @@ void AutoConfigStreamPage::ServiceChanged()
 	ui->service->setVisible(!custom);
 	ui->serviceLabel->setVisible(!custom);
 
+	ui->formLayout->removeWidget(ui->serviceLabel);
+	ui->formLayout->removeWidget(ui->service);
+
+	ui->formLayout->removeWidget(ui->serverLabel);
+	ui->formLayout->removeWidget(ui->serverStackedWidget);
+
 	if (custom) {
+		ui->formLayout->insertRow(1, ui->serverLabel,
+				ui->serverStackedWidget);
+
 		ui->region->setVisible(false);
 		ui->serverStackedWidget->setCurrentIndex(1);
 		ui->serverStackedWidget->setVisible(true);
 		ui->serverLabel->setVisible(true);
 	} else {
+		ui->formLayout->insertRow(1, ui->serviceLabel, ui->service);
+
+		if (!testBandwidth)
+			ui->formLayout->insertRow(2, ui->serverLabel,
+					ui->serverStackedWidget);
+
 		ui->region->setVisible(regionBased && testBandwidth);
 		ui->serverStackedWidget->setCurrentIndex(0);
-		ui->serverStackedWidget->setVisible(!testBandwidth);
-		ui->serverLabel->setVisible(!testBandwidth);
+		ui->serverStackedWidget->setHidden(testBandwidth);
+		ui->serverLabel->setHidden(testBandwidth);
 	}
 
 	wiz->testRegions = regionBased && testBandwidth;
 
 	ui->bitrateLabel->setHidden(testBandwidth);
 	ui->bitrate->setHidden(testBandwidth);
+
 	UpdateCompleted();	
 }
 
@@ -428,7 +444,7 @@ void AutoConfigStreamPage::UpdateCompleted()
 			ready = !ui->customServer->text().isEmpty();
 		} else {
 			ready = !wiz->testRegions ||
-				ui->regionNA->isChecked() ||
+				ui->regionUS->isChecked() ||
 				ui->regionEU->isChecked() ||
 				ui->regionAsia->isChecked() ||
 				ui->regionOther->isChecked();
@@ -538,15 +554,14 @@ void AutoConfig::TestHardwareEncoding()
 
 bool AutoConfig::CanTestServer(const char *server)
 {
-	if (!testRegions || (regionNA && regionEU && regionAsia && regionOther))
+	if (!testRegions || (regionUS && regionEU && regionAsia && regionOther))
 		return true;
 
 	if (service == Service::Twitch) {
 		if (astrcmp_n(server, "US West:", 8) == 0 ||
 		    astrcmp_n(server, "US East:", 8) == 0 ||
-		    astrcmp_n(server, "US Central:", 11) == 0 ||
-		    astrcmp_n(server, "NA:", 3) == 0) {
-			return regionNA;
+		    astrcmp_n(server, "US Central:", 11) == 0) {
+			return regionUS;
 		} else if (astrcmp_n(server, "EU:", 3) == 0) {
 			return regionEU;
 		} else if (astrcmp_n(server, "Asia:", 5) == 0) {
@@ -559,7 +574,7 @@ bool AutoConfig::CanTestServer(const char *server)
 			return true;
 		} else if (astrcmp_n(server, "US-West:", 8) == 0 ||
 		           astrcmp_n(server, "US-East:", 8) == 0) {
-			return regionNA;
+			return regionUS;
 		} else if (astrcmp_n(server, "EU-", 3) == 0) {
 			return regionEU;
 		} else if (astrcmp_n(server, "South Korea:", 12) == 0 ||
@@ -570,9 +585,8 @@ bool AutoConfig::CanTestServer(const char *server)
 			return true;
 		}
 	} else if (service == Service::Beam) {
-		if (astrcmp_n(server, "US:", 3) == 0 ||
-		    astrcmp_n(server, "Canada:", 7) == 0) {
-			return regionNA;
+		if (astrcmp_n(server, "US:", 3) == 0) {
+			return regionUS;
 		} else if (astrcmp_n(server, "EU:", 3) == 0) {
 			return regionEU;
 		} else if (astrcmp_n(server, "South Korea:", 12) == 0 ||
