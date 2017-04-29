@@ -1431,6 +1431,27 @@ void OBSBasic::OBSInit()
 	SystemTray(true);
 
 	OpenSavedProjectors();
+
+	bool has_last_version = config_has_user_value(App()->GlobalConfig(),
+			"General", "LastVersion");
+	bool first_run = config_get_bool(App()->GlobalConfig(), "General",
+			"FirstRun");
+
+	if (!first_run) {
+		config_set_bool(App()->GlobalConfig(), "General", "FirstRun",
+				true);
+		config_save_safe(App()->GlobalConfig(), "tmp", nullptr);
+	}
+
+	if (!first_run && !has_last_version && !Active()) {
+		QMessageBox::StandardButton button =
+			QMessageBox::question(this,
+				QTStr("Basic.FirstStartup.RunWizard.Title"),
+				QTStr("Basic.FirstStartup.RunWizard.Text"));
+
+		if (button == QMessageBox::Yes)
+			on_autoConfigure_triggered();
+	}
 }
 
 void OBSBasic::InitHotkeys()
@@ -3970,7 +3991,7 @@ inline void OBSBasic::OnActivate()
 {
 	if (ui->profileMenu->isEnabled()) {
 		ui->profileMenu->setEnabled(false);
-		ui->actionTest123->setEnabled(false);
+		ui->autoConfigure->setEnabled(false);
 		App()->IncrementSleepInhibition();
 		UpdateProcessPriority();
 
@@ -3983,7 +4004,7 @@ inline void OBSBasic::OnDeactivate()
 {
 	if (!outputHandler->Active() && !ui->profileMenu->isEnabled()) {
 		ui->profileMenu->setEnabled(true);
-		ui->actionTest123->setEnabled(true);
+		ui->autoConfigure->setEnabled(true);
 		App()->DecrementSleepInhibition();
 		ClearProcessPriority();
 
@@ -5383,7 +5404,7 @@ void OBSBasic::on_actionPasteFilters_triggered()
 	obs_source_copy_filters(dstSource, source);
 }
 
-void OBSBasic::on_actionTest123_triggered()
+void OBSBasic::on_autoConfigure_triggered()
 {
 	AutoConfig test(this);
 	test.setModal(true);
