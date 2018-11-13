@@ -2,10 +2,6 @@ if(NOT ENABLE_WIN_UPDATER)
 	return()
 endif()
 
-if(DISABLE_UPDATE_MODULE)
-	return()
-endif()
-
 if(NOT DEFINED STATIC_ZLIB_PATH OR "${STATIC_ZLIB_PATH}" STREQUAL "")
 	message(STATUS "STATIC_ZLIB_PATH not set, windows updater disabled")
 	return()
